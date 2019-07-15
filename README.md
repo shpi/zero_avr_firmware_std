@@ -11,7 +11,7 @@ basic firmware for:
 ## prerequisites
 A SHPI.zero with GCC and dfu-programmer installed.
 
- installed
+
 
 ## Getting Started
 
