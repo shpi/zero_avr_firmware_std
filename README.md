@@ -1,6 +1,6 @@
 # SHPI.zero Basic ATmega32u4 Firmware
 
-Basic firmware for ATmega32u2 as I2C-Slave
+Basic firmware for ATmega32u4 as I2C-Slave
 
 - communication only over I2C (USB free for CULFW)
 - backlight control
@@ -9,6 +9,7 @@ Basic firmware for ATmega32u2 as I2C-Slave
 - control vent
 - control LED
 - read sensors and more
+- uses counter0 for VENT PWM
 
 ## prerequisites
 A SHPI.zero with GCC and dfu-programmer installed.
@@ -24,15 +25,36 @@ git clone https://github.com/shpi/zero_avr_firmware_std.git
 
 
 
-##I2C example command:
+## I2C example command
+
+Read Relay 1 Status
+
 ```bash
-i2cget -y 2 0x2A 0x0D   //0x0D  read relay 1          
+i2cget -y 2 0x2A 0x0D             
 
 ```
 it should return :
 ```
 0x00   // or 0xFF, depending relay 1 status 
 ```
+
+If response consists of more bytes use
+
+```bash
+i2cget -y 2 0x2A    
+
+```
+to read one more byte.
+
+Set RGB LED to white
+
+
+```bash
+i2cset -y 2 0x2A 0x8c 0xFF 0xFF 0xFF i    
+
+```
+
+
 
 
 ## Compile & flash
@@ -67,7 +89,7 @@ sudo make flash
 |Buzzer		|	0b00010010	|	0x12	|	1 Byte		|	0x00 / 0xFF	|
 |VENT_PWM	|	0b00010011	|	0x13	|	1 Byte		|	0 – 255		|
 										
-##I2C write commands									
+## I2C write commands									
 
 |	command		|	commandbyte	|	in hex	|	expects	|	value			|
 |	----------	|	----------	|----------	|----------	|	----------		|
