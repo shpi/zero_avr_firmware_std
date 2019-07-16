@@ -1,12 +1,14 @@
 # SHPI.zero Basic ATmega32u4 Firmware
 
-basic firmware for:
+Basic firmware for ATmega32u2 as I2C-Slave
 
+- communication only over I2C (USB free for CULFW)
 - backlight control
 - lcd setup
 - control relais
 - control vent
-- read sensors
+- control LED
+- read sensors and more
 
 ## prerequisites
 A SHPI.zero with GCC and dfu-programmer installed.
@@ -22,7 +24,7 @@ git clone https://github.com/shpi/zero_avr_firmware_std.git
 
 
 
-I2C command test:
+##I2C example command:
 ```bash
 i2cget -y 2 0x2A 0x0D   //0x0D  read relay 1          
 
@@ -33,13 +35,51 @@ it should return :
 ```
 
 
-## Usage
+## Compile & flash
 To compile and flash:
 ```bash
 cd zero_avr_firmware
 sudo make flash
 ```
 
+## I2C read commands									
+										
+|	value	|	commandbyte	|	in hex	|	response	|	format		|
+|---------------|	----------	|--------------	|	----------	|	----------	|
+|A0		|	0b00000000	|	0x00	|	10bit in 2 Byte	|	0 -1023		|
+|A1		|	0b00000001	|	0x01	|	10bit in 2 Byte	|	0 -1023		|
+|A2		|	0b00000010	|	0x02	|	10bit in 2 Byte	|	0 -1023		|
+|A3		|	0b00000011	|	0x03	|	10bit in 2 Byte	|	0 -1023		|
+|A4		|	0b00000100	|	0x04	|	10bit in 2 Byte	|	0 -1023		|
+|A5		|	0b00000101	|	0x05	|	10bit in 2 Byte	|	0 -1023		|
+|A7		|	0b00000110	|	0x06	|	10bit in 2 Byte	|	0 -1023		|
+|BL_LEVEL	|	0b00000111	|	0x07	|	1 Byte		|	0-31		|
+|VENT_RPM	|	0b00001000	|	0x08	|	2 Byte		|	UPM		|
+|VCC Atmega	|	0b00001001	|	0x09	|	2 Byte		|	in Millivolts	|
+|IntTemp Atmega	|	0b00001010	|	0x0A	|	2 Byte		|	degree celsius	|
+|FREERAM	|	0b00001011	|	0x0B	|	2 Byte		|	in Bytes	|
+|LED_COLOR	|	0b00001100	|	0x0C	|	3 Byte		|	R, G, B 0-255	|
+|Relay1		|	0b00001101	|	0x0D	|	1 Byte		|	0x00 / 0xFF	|
+|Relay2		|	0b00001110	|	0x0E	|	1 Byte		|	0x00 / 0xFF	|
+|Relay3		|	0b00001111	|	0x0F	|	1 Byte		|	0x00 / 0xFF	|
+|D13		|	0b00010000	|	0x10	|	1 Byte		|	0x00 / 0xFF	|
+|HWB(gasheater)	|	0b00010001	|	0x11	|	1 Byte		|	0x00 / 0xFF	|
+|Buzzer		|	0b00010010	|	0x12	|	1 Byte		|	0x00 / 0xFF	|
+|VENT_PWM	|	0b00010011	|	0x13	|	1 Byte		|	0 – 255		|
+										
+##I2C write commands									
+
+|	command		|	commandbyte	|	in hex	|	expects	|	value			|
+|	----------	|	----------	|----------	|----------	|	----------		|
+|	BL_LEVEL_s	|	0b10000111	|	0x87	|	1 Byte	|	0 = off .. 31= 100%	|
+|	LED_COLOR_s	|	0b10001100	|	0x8C	|	3 Byte	|	R, G, B 0-255		|
+|	Relay1_S	|	0b10001101	|	0x8D	|	1 Byte	|	0x00 / 0xFF		|
+|	Relay2_S	|	0b10001110	|	0x8E	|	1 Byte	|	0x00 / 0xFF		|
+|	Relay3_S	|	0b10001111	|	0x8F	|	1 Byte	|	0x00 / 0xFF		|
+|	D13_S		|	0b10010000	|	0x90	|	1 Byte	|	0x00 / 0xFF		|
+|	HWB_S		|	0b10010001	|	0x91	|	1 Byte	|	0x00 / 0xFF		|
+|	Buzzer_S	|	0b10010010	|	0x92	|	1 Byte	|	0x00 / 0xFF		|
+|	VENT_PWM_S	|	0b10010011	|	0x93	|	1 Byte	|	0 = on .. 255 = off	|
 
 
 ## License
