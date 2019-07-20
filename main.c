@@ -111,13 +111,13 @@ uint16_t a0,a1,a2,a3,a4,a5,a7,vcc,temp,rpm,fanspin,isrtimer;
 
 
 
-// uint16_t commands[] = {0x0080, 0x01F8,  0x0246, 0x0305, 0x0440,  0x0540, 0x0640,0x0740, 0x0840,  0x0940, 0x0A03};            // only for A035VL01 
-uint16_t commands2[]=  {0x0011,0x0000,0x0001,0x0000,0x00C1,0x01A8,0x01B1,0x0145,0x0104,0x0C5,0x0180,0x016C,0x0C6,               // initcode for LCD A035VW01
+ uint16_t commands[] =  {0x0080, 0x01F8,  0x0246, 0x0305, 0x0440,  0x0540, 0x0640,0x0740, 0x0840,  0x0940, 0x0A03};            // only for  A035VW01 
+ uint16_t commands2[]=  {0x0011,0x0000,0x0001,0x0000,0x00C1,0x01A8,0x01B1,0x0145,0x0104,0x0C5,0x0180,0x016C,0x0C6,               // initcode for LCD A035VL01
                        0x01BD,0x0184,0x00C7,0x01BD,0x0184,0x00BD,0x0102,0x0011,0x0000,0x00F2,0x0100,0x0100,0x0182,
                        0x0026,0x0108,0x00E0,0x0100,0x0104,0x0108,0x010B,0x010C,0x0111,0x010D,0x010E,0x0100,0x0104,
                        0x0108,0x0113,0x0114,0x012F,0x0129,0x0124,0x00E1,0x0100,0x0104,0x0108,0x010B,0x010C,0x0111,
                        0x010D,0x010E,0x0100,0x0104,0x0108,0x0113,0x0114,0x012F,0x0129,0x0124,0x0026,0x0108,0x00FD,
-                       0x0100,0x0108,0x0029};
+                       0x0100,0x0108,0x0029};             
             
 
 void writebl(uint8_t data) {            // set single wire brightness  AL3050 
@@ -169,9 +169,9 @@ void write(uint16_t data, uint8_t count){                                   //  
 }
 
 void setup_lcd(void){
-  //  for(int x = 0; x < 11; x++){write(commands[x], 16);}        //only for A035VL01
-    for(int x=0;x < (sizeof(commands2) / sizeof(uint16_t)); x++){if(commands2[x]== 0x0000){_delay_ms(WAIT);continue;} write(commands2[x],9);
-    }
+   for(int x = 0; x < 11; x++){write(commands[x], 16);}        //only for A035VW01
+   for(int x=0;x < (sizeof(commands2) / sizeof(uint16_t)); x++){if(commands2[x]== 0x0000){_delay_ms(WAIT);continue;} write(commands2[x],9);  }      //only for A035VL01
+    
 }
 
   
@@ -185,7 +185,7 @@ uint16_t readAna(uint8_t channel) {
  		
  ADMUX |= (channel & 0x1F);
  ADCSRA |= _BV(ADEN);
- _delay_ms(1); 
+ _delay_ms(2); 
   ADCSRA |= (1 << ADSC);
 
   while((ADCSRA & _BV(ADSC)));  // measuring 
@@ -200,7 +200,7 @@ uint16_t readVcc(void) {
   ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
   ADCSRA |= _BV(ADEN);    
   ADCSRB &= ~_BV(MUX5);
-  _delay_ms(1);   
+  _delay_ms(2);   
   ADCSRA |= 1 << ADSC;
   while((ADCSRA & _BV(ADSC)));  // measuring
   ADCSRA |= 1 << ADSC;
@@ -216,10 +216,14 @@ uint16_t GetTemp(void)
   ADCSRB = 0x20;                          // ref  24.6
   ADCSRA &= ~(_BV(ADATE) |_BV(ADIE));   // Clear auto trigger and interrupt enable
   ADCSRA |= _BV(ADEN);                   // enable the ADC
-  _delay_ms(1);                       // delay for voltages to become stable.
+  _delay_ms(2);                       // delay for voltages to become stable.
 
  ADCSRA |= _BV(ADSC);                 // measuring
  while((ADCSRA & _BV(ADSC)));             
+
+ ADCSRA |= _BV(ADSC); 
+ while((ADCSRA & _BV(ADSC)));             
+
  return (ADCL | (ADCH << 8));
 }
 
@@ -379,7 +383,7 @@ void setup()
    led[0].g = 0;
    led[0].b = 0;
    ws2812_setleds(led,1);
-
+   OCR0A = 215;
 }
 
 int main()
