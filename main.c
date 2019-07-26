@@ -17,7 +17,7 @@
 *   0x8F  set Relay 3                       // i2cset -y 2 0x2A 0x8F 0x00                     (0x00 = off  0xFF = on)
 *   0x90  set D13 / PC7                     // i2cset -y 2 0x2A 0x90 0x00                     (0x00 = off  0xFF = on)
 *   0x91  set HWB / PE2                     // i2cset -y 2 0x2A 0x91 0x00                     (0x00 = off  0xFF = on)
-*   0x92  set Buzzer / PB5                  // i2cset -y 2 0x2A 0x92 0x00                     (0x00 = off  0xFF = on)
+*   0x92  set Buzzer / PB5                  // i2cset -y 2 0x2A 0x92 0x00                     (0x00 = off, 0x01 on for click sound,0xFF = on)
 *   0x93  set Vent power                    // i2cset -y 2 0x2A 0x93 0x00                     (PWM:  0x00 = on ... 0xFF = off)
 *
 *
@@ -281,13 +281,14 @@ ISR(TWI_vect)
       else if ((commandbyte == 0x8F ) & (buffer_address == 1)) {if (TWDR == 0xFF) {PORTB |= _BV(PB6);} else {PORTB &= ~_BV(PB6);} }  //set Relais 3
       else if ((commandbyte == 0x90 ) & (buffer_address == 1)) {if (TWDR == 0xFF) {PORTC |= _BV(PC7);} else {PORTC &= ~_BV(PC7);} }  //set D13
       else if ((commandbyte == 0x91 ) & (buffer_address == 1)) {if (TWDR == 0xFF) {PORTE |=  (1<<2);} else {PORTE &= ~(1<<2);} }  //set HWB ->Gasheater      (D13 on prototypes)
-      else if ((commandbyte == 0x92 ) & (buffer_address == 1)) {if (TWDR == 0xFF) {PORTB |= _BV(PB5);} else {PORTB &= ~_BV(PB5);} }  //set Buzzer
+      else if ((commandbyte == 0x92 ) & (buffer_address == 1)) {if (TWDR == 0xFF) {PORTB |= _BV(PB5);} else if (TWDR ==0x01) {PORTB |= _BV(PB5);} else {PORTB &= ~_BV(PB5);} }  //set Buzzer
       else if ((commandbyte == 0x93 ) & (buffer_address == 1)) {OCR0A = TWDR;}  //set Vent
       
       
       
       } 
       TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
+      if ((commandbyte == 0x92) & (buffer_address == 1) & (TWDR == 0x01)) {;_delay_us(30); PORTB &= ~_BV(PB5);}
       break;
     case TW_ST_SLA_ACK:
 

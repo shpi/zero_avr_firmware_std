@@ -4,21 +4,21 @@ Basic firmware for ATmega32u4 as I2C-Slave
 
 - communication only over I2C (USB free for CULFW)
 - backlight control
-- lcd setup
-- control relais
-- control internal vent
+- LCD setup
+- control relays
+- control internal blower fan
 - control LED
 - read sensors and more
 - uses counter0 for VENT PWM
 
 ## prerequisites
-A SHPI.zero with GCC and dfu-programmer installed.
+A SHPI.zero with GCC and DFU-programmer installed.
 
 
 
 ## Getting Started
 
-Download git folder on your SHPI.zero:
+Download GIT folder on your SHPI.zero:
 ```bash
 git clone https://github.com/shpi/zero_avr_firmware_std.git
 ```
@@ -27,7 +27,7 @@ git clone https://github.com/shpi/zero_avr_firmware_std.git
 
 ## I2C example command
 
-Read Relay 1 Status
+Read relay 1 status
 
 ```bash
 i2cget -y 2 0x2A 0x0D             
@@ -38,7 +38,7 @@ it should return :
 0x00   // or 0xFF, depending relay 1 status 
 ```
 
-If response consists of more bytes use
+If response consists more bytes, use
 
 ```bash
 i2cget -y 2 0x2A    
@@ -91,17 +91,17 @@ sudo make flash
 										
 ## I2C write commands									
 
-|	command		|	commandbyte	|	in hex	|	expects	|	value			|
-|	----------	|	----------	|----------	|----------	|	----------		|
-|	BL_LEVEL_s	|	0b10000111	|	0x87	|	1 Byte	|	0 = off .. 31= 100%	|
-|	LED_COLOR_s	|	0b10001100	|	0x8C	|	3 Byte	|	R, G, B 0-255		|
-|	Relay1_S	|	0b10001101	|	0x8D	|	1 Byte	|	0x00 / 0xFF		|
-|	Relay2_S	|	0b10001110	|	0x8E	|	1 Byte	|	0x00 / 0xFF		|
-|	Relay3_S	|	0b10001111	|	0x8F	|	1 Byte	|	0x00 / 0xFF		|
-|	D13_S		|	0b10010000	|	0x90	|	1 Byte	|	0x00 / 0xFF		|
-|	HWB_S		|	0b10010001	|	0x91	|	1 Byte	|	0x00 / 0xFF		|
-|	Buzzer_S	|	0b10010010	|	0x92	|	1 Byte	|	0x00 / 0xFF		|
-|	VENT_PWM_S	|	0b10010011	|	0x93	|	1 Byte	|	0 = on .. 255 = off	|
+|	command		|	commandbyte	|	in hex	|	expects	|	value				|
+|	----------	|	----------	|----------	|----------	|	----------			|
+|	BL_LEVEL_s	|	0b10000111	|	0x87	|	1 Byte	|	0 = off .. 31= 100%		|
+|	LED_COLOR_s	|	0b10001100	|	0x8C	|	3 Byte	|	R, G, B 0-255			|
+|	Relay1_S	|	0b10001101	|	0x8D	|	1 Byte	|	0x00 / 0xFF			|
+|	Relay2_S	|	0b10001110	|	0x8E	|	1 Byte	|	0x00 / 0xFF			|
+|	Relay3_S	|	0b10001111	|	0x8F	|	1 Byte	|	0x00 / 0xFF			|
+|	D13_S		|	0b10010000	|	0x90	|	1 Byte	|	0x00 / 0xFF			|
+|	HWB_S		|	0b10010001	|	0x91	|	1 Byte	|	0x00 / 0xFF			|
+|	Buzzer_S	|	0b10010010	|	0x92	|	1 Byte	|	0x00 / 0xFF - NEW:0x01 for click|
+|	VENT_PWM_S	|	0b10010011	|	0x93	|	1 Byte	|	0 = on .. 255 = off		|
 
 
 ## License
