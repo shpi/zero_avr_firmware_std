@@ -106,7 +106,7 @@ struct cRGB led[1];
 #define I2C_ADDR 0x2A
 
 uint8_t commandbyte, buffer_address,a7count = 0,count,bllevel = 31,newbllevel = 31,changeled;  
-uint16_t a0,a1,a2,a3,a4,a5,a7,a7avg,a7sum,vcc,temp,rpm,fanspin,isrtimer;
+uint16_t a0,a1,a2,a3,a4,a5,a7,a7avg,a7max,a7min,vcc,temp,rpm,fanspin,isrtimer;
 
 
 
@@ -452,9 +452,10 @@ int main()
 
  
    default: {a7 = readAna(10);  //read A7 more frequently 
-           a7sum += a7;
+           if (a7 > a7max) a7max = a7;
+           if (a7 < a7min) a7min = a7;
            a7count++;
-           if (a7count > 60) {a7avg = (a7sum / a7count); a7sum = 0;  a7count = 0;} 
+           if (a7count > 60) {a7avg = (a7max - ((a7max +  a7min)/ 2)) * 0.707 ; a7min = 1024; a7max = 0; a7count = 0;} 
            break; 
            }
   
