@@ -74,7 +74,7 @@
 *   0x11  read HWB                         // i2cget -y 2 0x2A 0x11 
 *   0x12  read Buzzer                      // i2cget -y 2 0x2A 0x12 
 *   0x13  read VENT PWM value              // i2cget -y 2 0x2A 0x13    
-*
+*   0x14  read AVG A7 for AC currents 
 *
 *
 *
@@ -105,8 +105,8 @@
 struct cRGB led[1];
 #define I2C_ADDR 0x2A
 
-uint8_t commandbyte, buffer_address, count,bllevel = 31,newbllevel = 31,changeled;  
-uint16_t a0,a1,a2,a3,a4,a5,a7,vcc,temp,rpm,fanspin,isrtimer;
+uint8_t commandbyte, buffer_address,a7count = 0,count,bllevel = 31,newbllevel = 31,changeled;  
+uint16_t a0,a1,a2,a3,a4,a5,a7,a7avg,a7sum,vcc,temp,rpm,fanspin,isrtimer;
 
 
 
@@ -182,8 +182,21 @@ uint16_t readAna(uint8_t channel) {
  ADCSRA |= _BV(ADPS2) | _BV(ADPS1) | _BV(ADPS0);
  ADCSRB = 0x40; 
  ADMUX  = ((0<<REFS1)|	  (1<<REFS0)|  (0<<ADLAR));
- 		
- ADMUX |= (channel & 0x1F);
+
+ if (channel >=8)//
+  {
+    channel -= 0x08;//ch - 8           
+    ADCSRB |=  (1 << MUX5);   // set MUX5 on ADCSRB to read upper bit ADC8-ADC13
+  } 
+  else
+  {    
+    ADCSRB &=  ~(1 << MUX5);   // clear MUX 5 
+  }
+  channel &= 0x07; 
+  ADMUX |= channel; // selecting channel
+     
+
+
  ADCSRA |= _BV(ADEN);
  _delay_ms(2); 
   ADCSRA |= (1 << ADSC);
@@ -339,7 +352,9 @@ ISR(TWI_vect)
       else if ((commandbyte == 0x12) & (count == 0)) {if (bit_is_set(PINB,PB5)) {TWDR = 0xFF;} else {TWDR = 0x00;}}   //read buzzer
       else if ((commandbyte == 0x13) & (count == 0))  {TWDR = OCR0A;}   //read vent pwm
    
-
+      else if ((commandbyte == 0x14) & (count == 0))  {TWDR = a7avg & 0xFF;}   //get available free Ram
+      else if ((commandbyte == 0x14) & (count == 1))  {TWDR = a7avg >> 8;}
+ 
       else TWDR = 0x00;
       count++;
       _delay_us(1);  //debugging wait, sometimes raspberry dont see first bit
@@ -422,22 +437,26 @@ int main()
 	  }
   
   
-  if (adcselect < 8) {adcselect++;} else {adcselect = 0;}
+  if (adcselect < 10) {adcselect++;} else {adcselect = 0;}
   
   switch(adcselect)
   {
    case 0: a0 = readAna(7);  break;
    case 1: a1 = readAna(6);  break;
    case 2: a2 = readAna(5);  break;
-   case 3: a3 = readAna(4);  break; 
-   case 4: a4 = readAna(1);  break; 
-   case 5: a5 = readAna(0);  break; 
-   case 6: a7 = readAna(10); break; 
-   case 7: vcc = readVcc();  break;
-   case 8: temp = GetTemp();   break;
+   case 4: a3 = readAna(4);  break; 
+   case 5: a4 = readAna(1);  break; 
+   case 7: a5 = readAna(0);  break;
+   case 8: vcc = readVcc();  break;
+   case 10: temp = GetTemp();   break;
 
-    
-
+ 
+   default: {a7 = readAna(10);  //read A7 more frequently 
+           a7sum += a7;
+           a7count++;
+           if (a7count > 60) {a7avg = (a7sum / a7count); a7sum = 0;  a7count = 0;} 
+           break; 
+           }
   
   
 }} }
