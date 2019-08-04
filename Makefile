@@ -495,9 +495,9 @@ flash: $(TARGET).hex
 	sleep 1
 	gpio -g mode 11 in
 	sleep 1
-	dfu-programmer $(MCU) erase
-	dfu-programmer $(MCU) flash  $(TARGET).hex
-	dfu-programmer $(MCU) start  
+	sudo dfu-programmer $(MCU) erase
+	sudo dfu-programmer $(MCU) flash  $(TARGET).hex
+	sudo dfu-programmer $(MCU) start  
 
 
 # Include the dependency files.
