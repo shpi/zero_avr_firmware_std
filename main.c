@@ -399,7 +399,7 @@ void setup()
    led[0].g = 0;
    led[0].b = 0;
    ws2812_setleds(led,1);
-   OCR0A = 215;
+   OCR0A = 210;
 }
 
 int main()
