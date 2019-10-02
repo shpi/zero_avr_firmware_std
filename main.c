@@ -142,7 +142,7 @@ void writebl(uint8_t data) {            // set single wire brightness  AL3050
 
 void initbl(){              // init AL3050 single wire dimming
 PORTD &= ~_BV(PD4);
-_delay_us(4000);
+_delay_us(3000);
 PORTD |= _BV(PD4);
 _delay_us(120);
 PORTD &= ~_BV(PD4);
@@ -380,7 +380,7 @@ void setup()
    DDRE = 0b00000000; // DDRE |= (1<<2);   be carefull with hwb, check if its connected to GND via 10k (prototypes!)
    DDRB = 0b11110110;
    DDRC = 0b11000000;
-   OCR0A = 190;      //    start value for FAN  190 / 255  (-> p-channel so inverted)       0x00 is ON  0xFF is OFF
+   OCR0A = 0;      //    start value for FAN  190 / 255  (-> p-channel so inverted)       0x00 is ON  0xFF is OFF
    TCCR0B  =  0b00000001;
    TCCR0A  =  0b10000001;            // 8bit dual slope 31khz
    TIMSK0 |= (1 << TOIE0);            // init interrupt for timer0 overflow
@@ -399,7 +399,7 @@ void setup()
    led[0].g = 0;
    led[0].b = 0;
    ws2812_setleds(led,1);
-   OCR0A = 210;
+   OCR0A = 205;
 }
 
 int main()
