@@ -199,7 +199,7 @@ uint16_t readAna(uint8_t channel) {
 
 
  ADCSRA |= _BV(ADEN);
- _delay_ms(1); 
+ _delay_ms(3); 
   ADCSRA |= (1 << ADSC);
 
   while((ADCSRA & _BV(ADSC)));  // measuring 
@@ -214,7 +214,7 @@ uint16_t readVcc(void) {
   ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
   ADCSRA |= _BV(ADEN);    
   ADCSRB &= ~_BV(MUX5);
-  _delay_ms(1);   
+  _delay_ms(3);   
   ADCSRA |= 1 << ADSC;
   while((ADCSRA & _BV(ADSC)));  // measuring
   ADCSRA |= 1 << ADSC;
@@ -230,7 +230,7 @@ uint16_t GetTemp(void)
   ADCSRB = 0x20;                          // ref  24.6
   ADCSRA &= ~(_BV(ADATE) |_BV(ADIE));   // Clear auto trigger and interrupt enable
   ADCSRA |= _BV(ADEN);                   // enable the ADC
-  _delay_ms(1);                       // delay for voltages to become stable.
+  _delay_ms(3);                       // delay for voltages to become stable.
 
  ADCSRA |= _BV(ADSC);                 // measuring
  while((ADCSRA & _BV(ADSC)));             
