@@ -1,4 +1,4 @@
- /*
+/*
 *  SHPI.zero Basic Firmware v1.1 BETA
 *
 * Basic Firmware for ATmega32u4 slave,  no radio module support included
@@ -85,9 +85,7 @@
 */
 
 
-  
-
-
+#include <avr/wdt.h>
 #include <avr/power.h>
 #include <avr/io.h>
 #include <stdlib.h>
@@ -104,6 +102,9 @@
 #include "light_ws2812.h"
 struct cRGB led[1];
 #define I2C_ADDR 0x2A
+#define SCL_LINE  (PIND & (1<<PD0))
+#define SDA_LINE  (PIND & (1<<PD1))
+
 
 uint8_t commandbyte, buffer_address,a7count = 0,count,bllevel = 31,newbllevel = 31,changeled;  
 uint16_t a0,a1,a2,a3,a4,a5,a7,a7avg,a7max,a7min,vcc,temp,rpm,fanspin,isrtimer;
@@ -111,8 +112,8 @@ uint16_t a0,a1,a2,a3,a4,a5,a7,a7avg,a7max,a7min,vcc,temp,rpm,fanspin,isrtimer;
 
 
 
- uint16_t commands[] =  {0x0080, 0x01F8,  0x0246, 0x0305, 0x0440,  0x0540, 0x0640,0x0740, 0x0840,  0x0940, 0x0A03};            // only for  A035VW01 
- uint16_t commands2[]=  {0x0011,0x0000,0x0001,0x0000,0x00C1,0x01A8,0x01B1,0x0145,0x0104,0x0C5,0x0180,0x016C,0x0C6,               // initcode for LCD A035VL01
+uint16_t commands[] =  {0x0080, 0x01F8,  0x0246, 0x0305, 0x0440,  0x0540, 0x0640,0x0740, 0x0840,  0x0940, 0x0A03};            // only for  A035VW01 
+uint16_t commands2[]=  {0x0011,0x0000,0x0001,0x0000,0x00C1,0x01A8,0x01B1,0x0145,0x0104,0x0C5,0x0180,0x016C,0x0C6,               // initcode for LCD A035VL01
                        0x01BD,0x0184,0x00C7,0x01BD,0x0184,0x00BD,0x0102,0x0011,0x0000,0x00F2,0x0100,0x0100,0x0182,
                        0x0026,0x0108,0x00E0,0x0100,0x0104,0x0108,0x010B,0x010C,0x0111,0x010D,0x010E,0x0100,0x0104,
                        0x0108,0x0113,0x0114,0x012F,0x0129,0x0124,0x00E1,0x0100,0x0104,0x0108,0x010B,0x010C,0x0111,
@@ -198,7 +199,7 @@ uint16_t readAna(uint8_t channel) {
 
 
  ADCSRA |= _BV(ADEN);
- _delay_ms(2); 
+ _delay_ms(1); 
   ADCSRA |= (1 << ADSC);
 
   while((ADCSRA & _BV(ADSC)));  // measuring 
@@ -213,7 +214,7 @@ uint16_t readVcc(void) {
   ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
   ADCSRA |= _BV(ADEN);    
   ADCSRB &= ~_BV(MUX5);
-  _delay_ms(2);   
+  _delay_ms(1);   
   ADCSRA |= 1 << ADSC;
   while((ADCSRA & _BV(ADSC)));  // measuring
   ADCSRA |= 1 << ADSC;
@@ -229,7 +230,7 @@ uint16_t GetTemp(void)
   ADCSRB = 0x20;                          // ref  24.6
   ADCSRA &= ~(_BV(ADATE) |_BV(ADIE));   // Clear auto trigger and interrupt enable
   ADCSRA |= _BV(ADEN);                   // enable the ADC
-  _delay_ms(2);                       // delay for voltages to become stable.
+  _delay_ms(1);                       // delay for voltages to become stable.
 
  ADCSRA |= _BV(ADSC);                 // measuring
  while((ADCSRA & _BV(ADSC)));             
@@ -264,9 +265,11 @@ ISR(PCINT0_vect) {if (bit_is_clear(PINB,PB0)) fanspin++; }  // counting VENT_RPM
 ISR(TIMER0_OVF_vect){ isrtimer++; }  // reuse timer0 for counting VENT_RPM
 
 
-
 ISR(TWI_vect)
 {
+
+  
+
   switch(TW_STATUS)
   {
 
@@ -274,7 +277,6 @@ ISR(TWI_vect)
 	    TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
 	    buffer_address=0xFF; // set buffer pos undefined
       break;
-	
 
     case TW_SR_DATA_ACK:
       // received data from master
@@ -300,8 +302,11 @@ ISR(TWI_vect)
       
       
       } 
+      
       TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
       if ((commandbyte == 0x92) & (buffer_address == 1) & (TWDR == 0x01)) {;_delay_us(30); PORTB &= ~_BV(PB5);}
+
+      
       break;
     case TW_ST_SLA_ACK:
 
@@ -352,24 +357,35 @@ ISR(TWI_vect)
       else if ((commandbyte == 0x12) & (count == 0)) {if (bit_is_set(PINB,PB5)) {TWDR = 0xFF;} else {TWDR = 0x00;}}   //read buzzer
       else if ((commandbyte == 0x13) & (count == 0))  {TWDR = OCR0A;}   //read vent pwm
    
-      else if ((commandbyte == 0x14) & (count == 0))  {TWDR = a7avg & 0xFF;}   //get available free Ram
+      else if ((commandbyte == 0x14) & (count == 0))  {TWDR = a7avg & 0xFF;}  
       else if ((commandbyte == 0x14) & (count == 1))  {TWDR = a7avg >> 8;}
  
-      else TWDR = 0x00;
+      else TWDR = 0xFF;
       count++;
       _delay_us(1);  //debugging wait, sometimes raspberry dont see first bit
       TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
+
       break;
-  
+     
+
     case TW_BUS_ERROR:
-      // I2C Bus error
-      TWCR = 0;
-      TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN); 
-      break;
+
+     TWCR =   (1<<TWSTO)|(1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
+     while(TWCR&_BV(TWSTO));  
+
+     break;
+
     default:
-      TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
-      break;
+
+      TWCR = (1<<TWEN)|                                 // Enable TWI-interface and release TWI pins
+             (1<<TWIE)|(1<<TWINT)|                      // Keep interrupt enabled and clear the flag
+             (1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|           // Acknowledge on any new requests.
+             (0<<TWWC);                                 //
+
+
   }
+
+
 } 
 
 
@@ -377,6 +393,7 @@ void setup()
 {
    DDRF = 0b00000000;
    DDRD = 0b01111000;
+   PORTD= 0b00000000;
    DDRE = 0b00000000; // DDRE |= (1<<2);   be carefull with hwb, check if its connected to GND via 10k (prototypes!)
    DDRB = 0b11110110;
    DDRC = 0b11000000;
@@ -399,7 +416,10 @@ void setup()
    led[0].g = 0;
    led[0].b = 0;
    ws2812_setleds(led,1);
-   OCR0A = 205;
+   OCR0A = 210;
+   wdt_enable(WDTO_1S);
+   bllevel = 0;
+   newbllevel = 31;
 }
 
 int main()
@@ -408,7 +428,10 @@ int main()
   setup();
 
   while(1) {  
-	
+
+
+
+  wdt_reset();	
   if (isrtimer > 62500)   // routine for calculate fan speed - timer is 32khz, just to save ressources
   {rpm = fanspin * 15; // 2 signals each turn, double time but 60seconds        
   fanspin = 0;
@@ -421,7 +444,7 @@ int main()
       changeled = 0;
                      }
   
-  
+  if (0 <= newbllevel && newbllevel < 32) {
   if (newbllevel < bllevel) {                // smooth backlight level change in steps
 	  
 	  bllevel--;
@@ -434,7 +457,7 @@ int main()
 	  bllevel++;
 	   writebl(0b01011000);   writebl(0b00011111 & bllevel);
 	  
-	  }
+	  }}
   
   
   if (adcselect < 10) {adcselect++;} else {adcselect = 0;}
@@ -458,6 +481,7 @@ int main()
            if (a7count > 60) {a7avg = (a7max - ((a7max +  a7min)/ 2)) * 0.707 ; a7min = 1024; a7max = 0; a7count = 0;} 
            break; 
            }
-  
-  
-}} }
+ 
+}} 
+
+}
