@@ -330,7 +330,7 @@ ISR(TWI_vect) {
       else if (commandbyte == 0x8F ) {if (twdrbuffer == 0xFF) {PORTB |= _BV(PB6);} else {PORTB &= ~_BV(PB6); }} //set Relais 3
       else if (commandbyte == 0x90 ) {if (twdrbuffer == 0xFF) {PORTC |= _BV(PC7);} else {PORTC &= ~_BV(PC7); }} //set D13
       else if (commandbyte == 0x91 ) {if (twdrbuffer == 0xFF) {PORTE |=  (1<<2);}  else {PORTE &= ~(1<<2);   }}     //set HWB ->Gasheater      (D13 on prototypes)
-      else if (commandbyte == 0x92 ) {if (twdrbuffer == 0xFF) {PORTB |= _BV(PB5);} else if (twdrbuffer == 0x01) {PORTB |= _BV(PB5); twdrbuffer = 0x01;} else {PORTB &= ~_BV(PB5);twdrbuffer = 0x00;}}   //set Buzzer
+      else if (commandbyte == 0x92 ) {if (twdrbuffer == 0xFF) {PORTB |= _BV(PB5);} else if (twdrbuffer == 0x01) {PORTB |= _BV(PB5); twdrbuffer = 0x02;} else {PORTB &= ~_BV(PB5);twdrbuffer = 0x00;}}   //set Buzzer
       else if (commandbyte == 0x93 ) {OCR0A = twdrbuffer;}  //set Vent
       else                          {i2cerror++;}
       } 
@@ -340,7 +340,7 @@ ISR(TWI_vect) {
 
       }
       TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
-      if ((commandbyte == 0x92) & (buffer_address == 2) & (twdrbuffer == 0x02)) {_delay_us(25); PORTB &= ~_BV(PB5);}
+      if ((commandbyte == 0x92) & (twdrbuffer == 0x02)) {_delay_us(25); PORTB &= ~_BV(PB5);}
       break;
 
     case TW_ST_SLA_ACK: //  slave adressed
