@@ -111,7 +111,7 @@ struct cRGB led[1];
 
 uint8_t commandbyte = 0xFF,twdrbuffer, buffer_address,a7count = 0,count,bllevel = 31,newbllevel = 31,changeled,crc,i2cerror = 0;  
 uint16_t a0,a1,a2,a3,a4,a5,a7,a7avg,a7max,a7min,vcc,temp,rpm,fanspin,isrtimer,i2cbuffer = 0;
-
+uint8_t fanlevel = 254;
 
 
 
@@ -331,7 +331,7 @@ ISR(TWI_vect) {
       else if (commandbyte == 0x90 ) {if (twdrbuffer == 0xFF) {PORTC |= _BV(PC7);} else {PORTC &= ~_BV(PC7); }} //set D13
       else if (commandbyte == 0x91 ) {if (twdrbuffer == 0xFF) {PORTE |=  (1<<2);}  else {PORTE &= ~(1<<2);   }}     //set HWB ->Gasheater      (D13 on prototypes)
       else if (commandbyte == 0x92 ) {if (twdrbuffer == 0xFF) {PORTB |= _BV(PB5);} else if (twdrbuffer == 0x01) {PORTB |= _BV(PB5); twdrbuffer = 0x02;} else {PORTB &= ~_BV(PB5);twdrbuffer = 0x00;}}   //set Buzzer
-      else if (commandbyte == 0x93 ) {OCR0A = twdrbuffer;}  //set Vent
+      else if (commandbyte == 0x93 ) {OCR0A = twdrbuffer;fanlevel = twdrbuffer;}  //set Vent
       else                          {i2cerror++;}
       } 
       else {i2cerror++;}
@@ -523,7 +523,10 @@ int main(void)
   {rpm = fanspin * 30;    // 2 signals each turn        
   fanspin = 0;
   isrtimer = 0;
-
+  if (fanlevel == 254) { //fan minimal auto
+  if (rpm > 4500) {OCR0A++;}
+  if (rpm < 3900) {OCR0A--;}
+  }
   }
 
   if (changeled)  {
