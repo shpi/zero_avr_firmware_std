@@ -346,7 +346,7 @@ ISR(TWI_vect) {
     case TW_ST_SLA_ACK: //  slave adressed
     case TW_ST_DATA_ACK:
       
-      _delay_us(0.4); 
+      _delay_us(0.5); 
 
 	     switch(commandbyte)  {		 
 
@@ -524,8 +524,8 @@ int main(void)
   fanspin = 0;
   isrtimer = 0;
   if (fanlevel == 254) { //fan minimal auto
-  if (rpm > 4500) {OCR0A++;}
-  if (rpm < 3900) {OCR0A--;}
+  if (rpm > 4400) {OCR0A++;}
+  if (rpm < 3600) {OCR0A--;}
   }
   }
 
