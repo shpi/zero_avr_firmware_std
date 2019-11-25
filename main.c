@@ -282,14 +282,14 @@ ISR(TWI_vect) {
     break;
    
   case TW_SR_DATA_ACK: // received data from master
-
+    
     if (buffer_address == 0xFF) {
 
       commandbyte = TWDR;
       crc = _crc8_ccitt_update(0, commandbyte);
       buffer_address = 0;
       i2cerror = 0;
-      
+
 
       switch (commandbyte) {		 
 
@@ -309,20 +309,18 @@ ISR(TWI_vect) {
 
 	    }
       } 
-      else {
-      buffer_address++; 
-      
+      else { 
 
-      if (commandbyte == 0x8C )  {      if (buffer_address == 1)                   {led[0].r = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }             // set RGB values for LED
-                                   else if (buffer_address == 2)                   {led[0].g = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }
-                                   else if (buffer_address == 3)                   {led[0].b = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }
-                                   else if ((buffer_address == 4) & (crc == TWDR)) {changeled = 1;}
-                                   else                                            {i2cerror++;}
+      if (commandbyte == 0x8C )  {      if (buffer_address == 0)                   {led[0].r = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }             // set RGB values for LED
+                                   else if (buffer_address == 1)                   {led[0].g = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }
+                                   else if (buffer_address == 2)                   {led[0].b = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }
+                                   else if ((buffer_address == 3) & (crc == TWDR)) {changeled = 1;}
+                                   else                                            {i2cerror++; buffer_address = 0xFF;}
                                    }
  
-      else  if (buffer_address == 1) {twdrbuffer = TWDR; crc = _crc8_ccitt_update(crc,TWDR);}
+      else  if (buffer_address == 0) {twdrbuffer = TWDR; crc = _crc8_ccitt_update(crc,TWDR);}
 
-      else  if ((buffer_address == 2) & (TWDR == crc)) {
+      else  if ((buffer_address == 1) & (TWDR == crc)) {
 
            if (commandbyte == 0x87 ) {newbllevel = twdrbuffer;}
       else if (commandbyte == 0x8D ) {if (twdrbuffer == 0xFF) {PORTC |= _BV(PC6);} else {PORTC &= ~_BV(PC6); }}  //set Relais 1
@@ -332,11 +330,12 @@ ISR(TWI_vect) {
       else if (commandbyte == 0x91 ) {if (twdrbuffer == 0xFF) {PORTE |=  (1<<2);}  else {PORTE &= ~(1<<2);   }}     //set HWB ->Gasheater      (D13 on prototypes)
       else if (commandbyte == 0x92 ) {if (twdrbuffer == 0xFF) {PORTB |= _BV(PB5);} else if (twdrbuffer == 0x01) {PORTB |= _BV(PB5); twdrbuffer = 0x02;} else {PORTB &= ~_BV(PB5);twdrbuffer = 0x00;}}   //set Buzzer
       else if (commandbyte == 0x93 ) {OCR0A = twdrbuffer;fanlevel = twdrbuffer;}  //set Vent
-      else                          {i2cerror++;}
+      else                          {i2cerror++; buffer_address = 0xFF;}
+      
       } 
       else {i2cerror++;}
 
-
+      buffer_address++;
 
       }
       TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
@@ -346,7 +345,7 @@ ISR(TWI_vect) {
     case TW_ST_SLA_ACK: //  slave adressed
     case TW_ST_DATA_ACK:
       
-      _delay_us(0.5); 
+      _delay_us(0.3); 
 
 	     switch(commandbyte)  {		 
 
@@ -358,7 +357,7 @@ ISR(TWI_vect) {
                  case 0x91:
                  case 0x92:
                  case 0x93:
-                 case 0x8C: if (buffer_address < 5) { TWDR = crc; crc = 0xFF; } else { TWDR = 0xFF; i2cerror++;} break;
+                 case 0x8C:  { TWDR = crc;  crc = 0xFF; buffer_address = 0xFE;} break;
                  case 0x00:
                  case 0x01:
                  case 0x02:
@@ -371,71 +370,71 @@ ISR(TWI_vect) {
                  case 0x0A: 
                  case 0x0B: 
                  case 0x14:      
-                                 if (buffer_address == 0) {TWDR = i2cbuffer & 0xFF;}
-                            else if (buffer_address == 1) {TWDR = i2cbuffer >> 8;}
+                                 if (buffer_address == 0) {TWDR = i2cbuffer & 0xFF; crc = _crc8_ccitt_update(crc,TWDR);}
+                            else if (buffer_address == 1) {TWDR = i2cbuffer >> 8;   crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 2) {TWDR = crc;}
-                            else                          {TWDR = 0xFF; i2cerror++;}
+                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
                             break; 
                            
                  case 0x0C:     
-                                if (buffer_address == 0)  {TWDR = led[0].r;}  
-                           else if (buffer_address == 1)  {TWDR = led[0].g;}
-                           else if (buffer_address == 2)  {TWDR = led[0].b;}
+                                if (buffer_address == 0)  {TWDR = led[0].r; crc = _crc8_ccitt_update(crc,TWDR);}  
+                           else if (buffer_address == 1)  {TWDR = led[0].g; crc = _crc8_ccitt_update(crc,TWDR);}
+                           else if (buffer_address == 2)  {TWDR = led[0].b; crc = _crc8_ccitt_update(crc,TWDR);}
                            else if (buffer_address == 3)  {TWDR = crc;}
-                           else                           {TWDR = 0xFF; i2cerror++;}
+                           else                           {TWDR = 0xFF; buffer_address = 0xFE; i2cerror++;}
                            break; 
 
                  case 0x07:          
-                                     if (buffer_address == 0) {TWDR = bllevel;}
+                                     if (buffer_address == 0) {TWDR = bllevel; crc = _crc8_ccitt_update(crc,TWDR);}
                                 else if (buffer_address == 1) {TWDR = crc;}
-                                else                         {TWDR = 0xFF; i2cerror++;}
+                                else                         {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
                                 break;
 
 
                  case 0x0D:      
-                                 if (buffer_address == 0) {if (bit_is_set(PINC,PC6)) {TWDR = 0xFF;} else {TWDR = 0x00;}}
+                                 if (buffer_address == 0) {if (bit_is_set(PINC,PC6)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else {TWDR = 0xFF; i2cerror++;}
+                            else {TWDR = 0xFF;buffer_address = 0xFF; i2cerror++;}
                             break;
 
                  case 0x0E:     
-                                 if (buffer_address == 0) {if (bit_is_set(PINB,PB4)) {TWDR = 0xFF;} else {TWDR = 0x00;}}
+                                 if (buffer_address == 0) {if (bit_is_set(PINB,PB4)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF; i2cerror++;}
+                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
                             break;
 
 
                  case 0x0F:     
-                                 if (buffer_address == 0) {if (bit_is_set(PINB,PB6)) {TWDR = 0xFF;} else {TWDR = 0x00;}}
+                                 if (buffer_address == 0) {if (bit_is_set(PINB,PB6)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) { TWDR = crc;}
-                            else                          {TWDR = 0xFF; i2cerror++;}
+                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
                             break;
 
                  case 0x10:  
-                                 if (buffer_address == 0) {if (bit_is_set(PINC,PC7)) {TWDR = 0xFF;} else {TWDR = 0x00;}}
+                                 if (buffer_address == 0) {if (bit_is_set(PINC,PC7)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF; i2cerror++;}
+                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
                             break;
 
 
                  case 0x11:  
-                                 if (buffer_address == 0) {if (bit_is_set(PINE,PE2)) {TWDR = 0xFF;} else {TWDR = 0x00;}}
+                                 if (buffer_address == 0) {if (bit_is_set(PINE,PE2)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF; i2cerror++;}
+                            else                          {TWDR = 0xFF; buffer_address = 0xFE; i2cerror++;}
                             break;
 
 
                  case 0x12:  
-                                 if (buffer_address == 0)  {if (bit_is_set(PINB,PB5)) {TWDR = 0xFF;} else {TWDR = 0x00;}}
+                                 if (buffer_address == 0)  {if (bit_is_set(PINB,PB5)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF; i2cerror++;}
+                            else                          {TWDR = 0xFF;  buffer_address = 0xFE; i2cerror++;}
                             break;
 
 
                  case 0x13:  
-                                 if (buffer_address == 0) {TWDR = OCR0A;}
+                                 if (buffer_address == 0) {TWDR = OCR0A; crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF; i2cerror++;}
+                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
                             break;
 
 
@@ -445,7 +444,7 @@ ISR(TWI_vect) {
 
 
 
-      crc = _crc8_ccitt_update(crc,TWDR);
+      
       buffer_address++;
       TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);        
       break;                                 
