@@ -15,15 +15,18 @@
 *
 *   ACTIVE COMMANDS
 *
-*   0x87 set backlight level of LCD   0-31  // i2cset -y 2 0x2A 0x87 31
-*   0x8C  set RGB value of LED              // i2cset -y 2 0x2A 0x8C 0xRR 0xGG 0xBB i         (replace RR GG BB by value 0-255)
-*   0x8D  set Relay 1                       // i2cset -y 2 0x2A 0x8D 0x00                     (0x00 = off  0xFF = on)
-*   0x8E  set Relay 2                       // i2cset -y 2 0x2A 0x8E 0x00                     (0x00 = off  0xFF = on)
-*   0x8F  set Relay 3                       // i2cset -y 2 0x2A 0x8F 0x00                     (0x00 = off  0xFF = on)
-*   0x90  set D13 / PC7                     // i2cset -y 2 0x2A 0x90 0x00                     (0x00 = off  0xFF = on)
-*   0x91  set HWB / PE2                     // i2cset -y 2 0x2A 0x91 0x00                     (0x00 = off  0xFF = on)
-*   0x92  set Buzzer / PB5                  // i2cset -y 2 0x2A 0x92 0x00                     (0x00 = off, 0x01 on for click sound,0xFF = on)
-*   0x93  set Vent power                    // i2cset -y 2 0x2A 0x93 0x00                     (PWM:  0x00 = on ... 0xFF = off)
+*   0x87 set backlight level of LCD   0-31  // i2cset -y 2 0x2A 0x87 31 +CRC
+*OLD:  0x8C  set RGB value of LED              // i2cset -y 2 0x2A 0x8C 0xRR 0xGG 0xBB +CRC i         (replace RR GG BB by value 0-255)
+*   0x8D  set Relay 1                       // i2cset -y 2 0x2A 0x8D 0x00 +CRC                     (0x00 = off  0xFF = on)
+*   0x8E  set Relay 2                       // i2cset -y 2 0x2A 0x8E 0x00 +CRC                    (0x00 = off  0xFF = on)
+*   0x8F  set Relay 3                       // i2cset -y 2 0x2A 0x8F 0x00 +CRC                    (0x00 = off  0xFF = on)
+*   0x90  set D13 / PC7                     // i2cset -y 2 0x2A 0x90 0x00 +CRC                    (0x00 = off  0xFF = on)
+*   0x91  set HWB / PE2                     // i2cset -y 2 0x2A 0x91 0x00 +CRC                    (0x00 = off  0xFF = on)
+*   0x92  set Buzzer / PB5                  // i2cset -y 2 0x2A 0x92 0x00 +CRC                    (0x00 = off, 0x01 on for click sound,0xFF = on)
+*   0x93  set Vent power                    // i2cset -y 2 0x2A 0x93 0x00 +CRC                    (PWM:  0x00 = on ... 0xFF = off)
+*   0x94  set R color
+*   0x95  set G color
+*   0x96  set B color 
 *
 *
 *  READOUT VALUES
@@ -311,14 +314,9 @@ ISR(TWI_vect) {
       } 
       else { 
 
-      if (commandbyte == 0x8C )  {      if (buffer_address == 0)                   {led[0].r = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }             // set RGB values for LED
-                                   else if (buffer_address == 1)                   {led[0].g = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }
-                                   else if (buffer_address == 2)                   {led[0].b = TWDR;  crc = _crc8_ccitt_update(crc,TWDR); }
-                                   else if ((buffer_address == 3) & (crc == TWDR)) {changeled = 1;}
-                                   else                                            {i2cerror++; buffer_address = 0xFF;}
-                                   }
+      
  
-      else  if (buffer_address == 0) {twdrbuffer = TWDR; crc = _crc8_ccitt_update(crc,TWDR);}
+      if (buffer_address == 0) {twdrbuffer = TWDR; crc = _crc8_ccitt_update(crc,TWDR);}
 
       else  if ((buffer_address == 1) & (TWDR == crc)) {
 
@@ -330,8 +328,11 @@ ISR(TWI_vect) {
       else if (commandbyte == 0x91 ) {if (twdrbuffer == 0xFF) {PORTE |=  (1<<2);}  else {PORTE &= ~(1<<2);   }}     //set HWB ->Gasheater      (D13 on prototypes)
       else if (commandbyte == 0x92 ) {if (twdrbuffer == 0xFF) {PORTB |= _BV(PB5);} else if (twdrbuffer == 0x01) {PORTB |= _BV(PB5); twdrbuffer = 0x02;} else {PORTB &= ~_BV(PB5);twdrbuffer = 0x00;}}   //set Buzzer
       else if (commandbyte == 0x93 ) {OCR0A = twdrbuffer;fanlevel = twdrbuffer;}  //set Vent
-      else                          {i2cerror++; buffer_address = 0xFF;}
-      
+      else if (commandbyte == 0x94 ) {led[0].r = twdrbuffer;changeled = 1;}  //set r color
+      else if (commandbyte == 0x95 ) {led[0].g = twdrbuffer;changeled = 1;}  //set g color
+      else if (commandbyte == 0x96 ) {led[0].b = twdrbuffer;changeled = 1;}  //set b color
+
+      else {i2cerror++;} 
       } 
       else {i2cerror++;}
 
@@ -357,7 +358,9 @@ ISR(TWI_vect) {
                  case 0x91:
                  case 0x92:
                  case 0x93:
-                 case 0x8C:  { TWDR = crc;  crc = 0xFF; buffer_address = 0xFE;} break;
+                 case 0x94:
+                 case 0x95:
+                 case 0x96:  { TWDR = crc;  crc = 0xFF;} break;
                  case 0x00:
                  case 0x01:
                  case 0x02:
@@ -373,7 +376,7 @@ ISR(TWI_vect) {
                                  if (buffer_address == 0) {TWDR = i2cbuffer & 0xFF; crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = i2cbuffer >> 8;   crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 2) {TWDR = crc;}
-                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
+                            else                          {TWDR = 0xFF; i2cerror++;}
                             break; 
                            
                  case 0x0C:     
@@ -381,39 +384,39 @@ ISR(TWI_vect) {
                            else if (buffer_address == 1)  {TWDR = led[0].g; crc = _crc8_ccitt_update(crc,TWDR);}
                            else if (buffer_address == 2)  {TWDR = led[0].b; crc = _crc8_ccitt_update(crc,TWDR);}
                            else if (buffer_address == 3)  {TWDR = crc;}
-                           else                           {TWDR = 0xFF; buffer_address = 0xFE; i2cerror++;}
+                           else                           {TWDR = 0xFF;  i2cerror++;}
                            break; 
 
                  case 0x07:          
                                      if (buffer_address == 0) {TWDR = bllevel; crc = _crc8_ccitt_update(crc,TWDR);}
                                 else if (buffer_address == 1) {TWDR = crc;}
-                                else                         {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
+                                else                         {TWDR = 0xFF; i2cerror++;}
                                 break;
 
 
                  case 0x0D:      
                                  if (buffer_address == 0) {if (bit_is_set(PINC,PC6)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else {TWDR = 0xFF;buffer_address = 0xFF; i2cerror++;}
+                            else {TWDR = 0xFF; i2cerror++;}
                             break;
 
                  case 0x0E:     
                                  if (buffer_address == 0) {if (bit_is_set(PINB,PB4)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
+                            else                          {TWDR = 0xFF; i2cerror++;}
                             break;
 
 
                  case 0x0F:     
                                  if (buffer_address == 0) {if (bit_is_set(PINB,PB6)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) { TWDR = crc;}
-                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
+                            else                          {TWDR = 0xFF; i2cerror++;}
                             break;
 
                  case 0x10:  
                                  if (buffer_address == 0) {if (bit_is_set(PINC,PC7)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
+                            else                          {TWDR = 0xFF; i2cerror++;}
                             break;
 
 
@@ -427,14 +430,14 @@ ISR(TWI_vect) {
                  case 0x12:  
                                  if (buffer_address == 0)  {if (bit_is_set(PINB,PB5)) {TWDR = 0xFF;} else {TWDR = 0x00;} crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF;  buffer_address = 0xFE; i2cerror++;}
+                            else                          {TWDR = 0xFF; i2cerror++;}
                             break;
 
 
                  case 0x13:  
                                  if (buffer_address == 0) {TWDR = OCR0A; crc = _crc8_ccitt_update(crc,TWDR);}
                             else if (buffer_address == 1) {TWDR = crc;}
-                            else                          {TWDR = 0xFF;buffer_address = 0xFE; i2cerror++;}
+                            else                          {TWDR = 0xFF; i2cerror++;}
                             break;
 
 
