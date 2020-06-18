@@ -480,7 +480,7 @@ void setup(void)
    DDRC = 0b11000000;
    OCR0A = 0;           //    start value for FAN  0 / 255  (-> p-channel so inverted)       0x00 is ON  0xFF is OFF
    TCCR0B  =  0b00000001;
-   TCCR0A  =  0b10000001;            // 8bit dual slope 31khz
+   TCCR0A  =  0b10000011;            // 8bit dual slope 31khz
    TIMSK0 |= (1 << TOIE0);            // init interrupt for timer0 overflow
    clock_prescale_set(clock_div_1);
    I2C_init(I2C_ADDR);
@@ -526,8 +526,8 @@ int main(void)
   fanspin = 0;
   isrtimer = 0;
   if (fanlevel == 254) { //fan minimal auto
-  if (rpm > 4400) {OCR0A++;}
-  if (rpm < 3600) {OCR0A--;}
+  if (rpm > 1950) {OCR0A++;}
+  if (rpm < 1800) {OCR0A--;}
   }
   }
 
