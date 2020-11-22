@@ -554,7 +554,7 @@ ISR(TWI_vect)
 				case 0x0E:
 					if (buffer_address == 0)
 					{
-						if (bit_is_set(PIND,PD7))
+						if (bit_is_set(PINB,PB4))
 						{
 							TWDR = 0xFF;
 						}
@@ -689,7 +689,7 @@ void setup(void)
 {
 
 	DDRF = 0b00000000;
-	DDRD = 0b01111000;
+	DDRD = 0b01111011;
 	PORTD= 0b00000000;
 	DDRE = 0b00000000;			 // DDRE |= (1<<2);   be carefull with hwb, check if its connected to GND via 10k (prototypes!)
 	DDRB = 0b11110110;
@@ -699,6 +699,8 @@ void setup(void)
 	TCCR0A  =  0b10000011;		 // 8bit  62khz
 	TIMSK0 |= (1 << TOIE0);		 // init interrupt for timer0 overflow
 	clock_prescale_set(clock_div_1);
+
+        _delay_ms(100);
 
 	I2C_init(I2C_ADDR);
 
