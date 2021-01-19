@@ -43,7 +43,7 @@
 
 struct cRGB led[1];
 uint8_t displaychange = 0, jumptobootloader = 0, watchdog = 0x00, display = 0xFF, led_position = 0, crc_active = 0xFF, commandbyte = 0xFF,twdrbuffer, buffer_address,a7count = 0,count,bllevel = 31,newbllevel = 31,changeled,crc,i2cerror = 0, fanlevel= 254;
-uint16_t a0,a1,a2,a3,a4,a5,a7,a7avg,a7max,a7min,vcc,temp,rpm,fanspin,isrtimer,i2cbuffer = 0, watchi2c = 0;
+uint16_t freeram,a0,a1,a2,a3,a4,a5,a7,a7avg,a7max,a7min,vcc,temp,rpm,fanspin,isrtimer,i2cbuffer = 0, watchi2c = 0;
 
 uint16_t commands[] =			 // only for  A035VW01
 {
@@ -239,7 +239,6 @@ void I2C_init(uint8_t address)	 // setup ATmega as I2C slave
 
 ISR(PCINT0_vect)
 {
-	sei();
 	if (bit_is_clear(PINB, PB0)) fanspin++;
 }								 // counting VENT_RPM
 
@@ -257,19 +256,19 @@ ISR(TWI_vect)
 	{
 
 		case TW_SR_SLA_ACK:
-
-			TWCR = (1 << TWIE) | (1 << TWINT) | (1 << TWEA) | (1 << TWEN);
+			//_delay_us(3);
+                        TWCR = (1 << TWIE) | (1 << TWINT) | (1 << TWEA) | (1 << TWEN);
 								 // set buffer pos undefined
 			buffer_address = 0xFF;
 			break;
 
 		case TW_SR_DATA_ACK:	 // received data from master
-
+                        //_delay_us(3);
 			if (buffer_address == 0xFF)
 			{
 
 				commandbyte = TWDR;
-				if (crc_active)   crc = _crc8_ccitt_update(0, commandbyte);
+				crc = _crc8_ccitt_update(0, commandbyte);
 				buffer_address = 0;
 				i2cerror = 0;
 
@@ -286,7 +285,7 @@ ISR(TWI_vect)
 					case 0x08: i2cbuffer = rpm;break;
 					case 0x09: i2cbuffer = vcc; break;
 					case 0x0A: i2cbuffer = temp;break;
-					case 0x0B: i2cbuffer = freeRam(); break;
+					case 0x0B: i2cbuffer = freeram; break;
 					case 0x17: i2cbuffer = a7avg; break;
 
 				}
@@ -304,11 +303,12 @@ ISR(TWI_vect)
 
 				if ((crc_active && (buffer_address == 1) && (TWDR == crc)) ||   (!crc_active && buffer_address == 0) )
 				{
+                                        switch(commandbyte) {
 
-					if (commandbyte == 0x87 ) {newbllevel = twdrbuffer;}
+					case 0x87: newbllevel = twdrbuffer; break;
 								 // switch display controller on off
-					else if (commandbyte == 0x98 )
-					{
+					case 0x98:
+					
 						displaychange = 1; if (twdrbuffer == 0xFF)
 						{
 							write_lcd(0x0A03,16); /* A035VL01: write_lcd(0x029,9); */ display = 0xFF;
@@ -317,10 +317,10 @@ ISR(TWI_vect)
 						{
 							write_lcd(0x0A02,16); /* A035VL01: write_lcd(0x028,9); */ display = 0x00;
 						}
-					}
+					        break;
 								 // display white / black
-					else if (commandbyte == 0x99 )
-					{
+					case 0x99:
+					
 						displaychange = 1; if (twdrbuffer == 0xFF)
 						{
 							write_lcd(0x023,9);
@@ -333,10 +333,10 @@ ISR(TWI_vect)
 						{
 							write_lcd(0x013,16);
 						}
-					}
+					        break;
 								 //set Relais 1
-					else if (commandbyte == 0x8D )
-					{
+					case 0x8D:
+					
 						if (twdrbuffer == 0xFF)
 						{
 							PORTC |= _BV(PC6);
@@ -345,10 +345,10 @@ ISR(TWI_vect)
 						{
 							PORTC &= ~_BV(PC6);
 						}
-					}
+					        break;
 								 //set Relais 2
-					else if (commandbyte == 0x8E )
-					{
+					case 0x8E:
+					
 						if (twdrbuffer == 0xFF)
 						{
 							PORTB |= _BV(PB4);
@@ -357,10 +357,10 @@ ISR(TWI_vect)
 						{
 							PORTB &= ~_BV(PB4);
 						}
-					}
+					        break;
 								 //set Relais 3
-					else if (commandbyte == 0x8F )
-					{
+					case 0x8F:
+					
 						if (twdrbuffer == 0xFF)
 						{
 							PORTB |= _BV(PB6);
@@ -369,10 +369,10 @@ ISR(TWI_vect)
 						{
 							PORTB &= ~_BV(PB6);
 						}
-					}
+					        break;
 								 //set D13
-					else if (commandbyte == 0x90 )
-					{
+					case 0x90:
+					
 						if (twdrbuffer == 0xFF)
 						{
 							PORTC |= _BV(PC7);
@@ -381,10 +381,10 @@ ISR(TWI_vect)
 						{
 							PORTC &= ~_BV(PC7);
 						}
-					}
+					        break;
 								 //set HWB ->Gasheater      (D13 on prototypes)
-					else if (commandbyte == 0x91 )
-					{
+					case 0x91:
+					
 						if (twdrbuffer == 0x00)
 						{
 							PORTE |=  (1<<2);
@@ -393,10 +393,10 @@ ISR(TWI_vect)
 						{
 							PORTE &= ~(1<<2);
 						}
-					}
+					        break;
 								 //set Buzzer
-					else if (commandbyte == 0x92 )
-					{
+					case 0x92:
+					
 						if (twdrbuffer == 0xFF)
 						{
 							PORTB |= _BV(PB5);
@@ -409,36 +409,37 @@ ISR(TWI_vect)
 						{
 							PORTB &= ~_BV(PB5);twdrbuffer = 0x00;
 						}
-					}
+					        break;
 								 //set Vent
-					else if (commandbyte == 0x93 )
-					{
-						OCR0A = twdrbuffer;fanlevel = twdrbuffer;
-					}
+					case 0x93:
+					
+						OCR0A = twdrbuffer; fanlevel = twdrbuffer;
+					        break;
 								 //set r color
-					else if (commandbyte == 0x94 )
-					{
+					case 0x94:
+					
 						led[led_position].r = twdrbuffer;changeled = 1;
-					}
+					        break;
 								 //set g color
-					else if (commandbyte == 0x95 )
-					{
+					case 0x95:
+					
 						led[led_position].g = twdrbuffer;changeled = 1;
-					}
+					        break;
 								 //set b color
-					else if (commandbyte == 0x96 )
-					{
+					case 0x96:
+					
 						led[led_position].b = twdrbuffer;changeled = 1;
-					}
+					        break;
 								 //jump to bootloader
-					else if (commandbyte == 0xFD )
-					{
+					case 0xFD:
+					
 						if (twdrbuffer == 0xFF) jumptobootloader = 1;
-					}
-					else if (commandbyte == 0xA1 ) {led_position = twdrbuffer;}
-					else if (commandbyte == 0xA0 ) {watchdog = twdrbuffer;}
-					else {i2cerror++;}
+					        break;
+					case 0xA1:  led_position = twdrbuffer; break;
+					case 0xA0: watchdog = twdrbuffer; break;
+					default: i2cerror++;
 
+                                }
 				}
 				else {i2cerror++;}
 
@@ -472,39 +473,39 @@ ISR(TWI_vect)
 
 				case 0x18:
 					if (buffer_address == 0)  {TWDR = display; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1)  {TWDR = crc;}
+					else if (buffer_address == 1)  {TWDR = crc;}
 					else     {TWDR = 0xFF; i2cerror++;}
 
 					break;
 
 				case 0x20:
 					if (buffer_address == 0)  {TWDR = watchdog; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1)  {TWDR = crc;}
+					else if (buffer_address == 1)  {TWDR = crc;}
 					else     {TWDR = 0xFF; i2cerror++;}
 
 					break;
 
 				case 0x21:
 					if (buffer_address == 0)  {TWDR = led_position; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1)  {TWDR = crc;}
+					else if (buffer_address == 1)  {TWDR = crc;}
 					else     {TWDR = 0xFF; i2cerror++;}
 
 					break;
 
 				case 0x14:
 					if (buffer_address == 0)  {TWDR = led[led_position].r; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1)  {TWDR = crc;}
+					else if (buffer_address == 1)  {TWDR = crc;}
 					else                           {TWDR = 0xFF;  i2cerror++;}
 					break;
 				case 0x15:
 					if (buffer_address == 0)  {TWDR = led[led_position].g; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1)  {TWDR = crc;}
+					else if (buffer_address == 1)  {TWDR = crc;}
 					else                           {TWDR = 0xFF;  i2cerror++;}
 					break;
 
 				case 0x16:
 					if (buffer_address == 0)  {TWDR = led[led_position].b; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1)  {TWDR = crc;}
+					else if (buffer_address == 1)  {TWDR = crc;}
 					else                           {TWDR = 0xFF;  i2cerror++;}
 					break;
 
@@ -522,7 +523,7 @@ ISR(TWI_vect)
 				case 0x17:
 					if (buffer_address == 0) {TWDR = i2cbuffer & 0xFF; crc = _crc8_ccitt_update(crc,TWDR);}
 					else if (buffer_address == 1) {TWDR = i2cbuffer >> 8;   crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 2) {TWDR = crc;}
+					else if (buffer_address == 2) {TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
@@ -530,7 +531,7 @@ ISR(TWI_vect)
 					if (buffer_address == 0)  {TWDR = led[led_position].r; crc = _crc8_ccitt_update(crc,TWDR);}
 					else if (buffer_address == 1)  {TWDR = led[led_position].g; crc = _crc8_ccitt_update(crc,TWDR);}
 					else if (buffer_address == 2)  {TWDR = led[led_position].b; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 3)  {TWDR = crc;}
+					else if (buffer_address == 3)  {TWDR = crc;}
 					else                           {TWDR = 0xFF;  i2cerror++;}
 					break;
 
@@ -547,7 +548,7 @@ ISR(TWI_vect)
 						}
 						crc = _crc8_ccitt_update(crc,TWDR);
 					}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else {TWDR = 0xFF; i2cerror++;}
 					break;
 
@@ -564,7 +565,7 @@ ISR(TWI_vect)
 						}
 						crc = _crc8_ccitt_update(crc,TWDR);
 					}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
@@ -581,7 +582,7 @@ ISR(TWI_vect)
 						}
 						crc = _crc8_ccitt_update(crc,TWDR);
 					}
-					else if (crc_active && buffer_address == 1) { TWDR = crc;}
+					else if (buffer_address == 1) { TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
@@ -598,7 +599,7 @@ ISR(TWI_vect)
 						}
 						crc = _crc8_ccitt_update(crc,TWDR);
 					}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
@@ -615,7 +616,7 @@ ISR(TWI_vect)
 						}
 						crc = _crc8_ccitt_update(crc,TWDR);
 					}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else                          {TWDR = 0xFF; buffer_address = 0xFE; i2cerror++;}
 					break;
 
@@ -632,31 +633,31 @@ ISR(TWI_vect)
 						}
 						crc = _crc8_ccitt_update(crc,TWDR);
 					}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
 				case 0x13:
-					if (buffer_address == 0) {TWDR = OCR0A; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					if (buffer_address == 0)      {TWDR = fanlevel; crc = _crc8_ccitt_update(crc,TWDR);}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
 				case 0x7E:
 					if (buffer_address == 0) {TWDR = crc_active; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
 				case 0x7F:
 					if (buffer_address == 0) {TWDR = FW_VERSION; crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1) {TWDR = crc;}
+					else if (buffer_address == 1) {TWDR = crc;}
 					else                          {TWDR = 0xFF; i2cerror++;}
 					break;
 
 				case 0x07:
 					if (buffer_address == 0)  {TWDR = bllevel; if (crc_active) crc = _crc8_ccitt_update(crc,TWDR);}
-					else if (crc_active && buffer_address == 1)  {TWDR = crc;}
+					else if (buffer_address == 1)  {TWDR = crc;}
 					else     {TWDR = 0xFF; i2cerror++;}
 
 					break;
@@ -665,7 +666,7 @@ ISR(TWI_vect)
 
 			}
 
-			_delay_us(3);
+			_delay_us(10);
 
 			buffer_address++;
 			TWCR = (1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
@@ -675,10 +676,8 @@ ISR(TWI_vect)
 			TWCR =   (1<<TWSTO)|(1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
 			break;
 
-			//case TW_SR_STOP:  TWCR |= (1<<TWINT)|(1<<TWEA)|(1<<TWEN);  break;
 
-		default:
-			TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)| (1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|  (0<<TWWC);
+		default: TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)| (1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|  (0<<TWWC);
 
 	}
 
@@ -773,7 +772,7 @@ int main(void)
 
 		if (!SDA_LINE) {i2cerror++;}
 
-		if (i2cerror > 200)
+		if (i2cerror > 100)
 		{
 			TWCR =   (1<<TWSTO)|(1<<TWIE) | (1<<TWINT) | (1<<TWEA) | (0<<TWEN);
 			I2C_init(I2C_ADDR);
@@ -835,6 +834,7 @@ int main(void)
 			case 5: a4 = read_analog(1);  break;
 			case 7: a5 = read_analog(0);  break;
 			case 8: vcc = readVcc();  break;
+                        case 9: freeram = freeRam(); break;
 			case 10: temp = GetTemp();   break;
 
 			default:			 //read A7 more frequently
